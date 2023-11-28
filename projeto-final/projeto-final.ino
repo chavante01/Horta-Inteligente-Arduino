@@ -42,8 +42,8 @@ void setup() {
   pinMode(sensorUmidade, INPUT); //recebe o sinal digital do sensor LOW para molhado e HIGH para terra seca
   lcd.init(); //função responsável por iniciar o LCD
   lcd.backlight(); //função responsável por manter a luz de fundo do LCD ligado
-  //myRTC.setDS1302Time(segL, minL, horL, d_semL, d_mesL, mesL, anoL);
-  Serial.begin(9600);
+  //myRTC.setDS1302Time(segL, minL, horL, d_semL, d_mesL, mesL, anoL);   //é de suma importância que você descomente essa linha e rode o código 
+  Serial.begin(9600);                                                      //uma única vez para setar esse valor no módulo RTC, após isso comente esta linha novamente
 }
 
 void loop() {
