@@ -3,8 +3,11 @@
 #include <SimpleDHT.h> //Biblioteca do sensor de temperatura
 #include <LiquidCrystal_I2C.h> //Biblioteca do display LCD
 #define sensorUmidade 2 // sinal do sensor de umidade do solo
-#define pinLed 8 // Bomba d'água
+#define pinLed 8 // indicador de solo molhado
+#define ledAlerta 7 //Bomba d'água
 #define controleDaTela 3 // entrada que irá receber os sinais para mudança na tela
+#define ledAtencao 6 // avisa que a bomba pode ligar
+
 
 #define   clk   11
 #define   dat   10
@@ -31,6 +34,7 @@ int modoDeApresentacao = 0;
 int diasParaColheita = 50;
 int comparador = 50;
 int diasQuePassaram = 0;
+int temporizadorParaAcionarBomba = 0;//essa variável é utilizada para segurança da bomba d'água, ela só irá acionar depois de 5 minutos que o sistema tiver passado para o estado "seco"
 SimpleDHT11 dht11(pinDHT11);
 
 LiquidCrystal_I2C lcd(0x27, 16, 2);  // set the LCD address to 0x27 for a 16 chars and 2 line display
@@ -38,6 +42,8 @@ LiquidCrystal_I2C lcd(0x27, 16, 2);  // set the LCD address to 0x27 for a 16 cha
 void setup() {
   // put your setup code here, to run once:
   pinMode(controleDaTela, INPUT); //recebe o sinal responsável por alterar o que é mostrado no LCD
+  pinMode(ledAtencao, OUTPUT); //ativa o LED de atenção para o acionamento da bomba d'água
+  pinMode(ledAlerta, OUTPUT); //ativa o LED que indica que a bomba d'água está em funcionamento
   pinMode(pinLed, OUTPUT); //Saída responsável por acionar a bomba d'água
   pinMode(sensorUmidade, INPUT); //recebe o sinal digital do sensor LOW para molhado e HIGH para terra seca
   lcd.init(); //função responsável por iniciar o LCD
@@ -53,7 +59,7 @@ void loop() {
   tela();
   
   myRTC.updateTime();
-  if(myRTC.hours == 23 && myRTC.minutes == 59){
+  if(myRTC.hours == 23 && myRTC.minutes == 59){ // se passarem 24h, então decresça um dia do tempo para a colheita
     if(comparador != diasQuePassaram){
       diasParaColheita = diasParaColheita - 1;
       diasQuePassaram ++;
@@ -62,14 +68,35 @@ void loop() {
 }
 
 void umidadeDaTerra() {
-  if (digitalRead(sensorUmidade) == LOW){ //condição que identifica quando o solo está molhado
-    digitalWrite(pinLed,HIGH);
-    //Serial.print("1");
-  } else {
-    digitalWrite(pinLed, LOW);
-    //Serial.print("0");
-  }
+  myRTC.updateTime();
+  Serial.print(myRTC.seconds);
+  Serial.print(" //");
+  Serial.print(temporizadorParaAcionarBomba);
+  Serial.print(" //");
 
+  if (digitalRead(sensorUmidade) == LOW){ //condição que identifica quando o solo está molhado
+    temporizadorParaAcionarBomba = 0; //reseta o contador de segurança
+    digitalWrite(pinLed, HIGH); //indicador de solo molhado
+    digitalWrite(ledAlerta, LOW); //bomba d'água
+    digitalWrite(ledAtencao, LOW);
+  }
+  
+
+  else if(digitalRead(sensorUmidade) == HIGH){ //condição que identifica solo seco
+    if(myRTC.seconds == 59) {  // esse contador tem uma imprecisão de alguns segundos, mas serão suficientes para que a bomba só acione quando de fato necessário
+      temporizadorParaAcionarBomba ++;
+    }
+    if( (temporizadorParaAcionarBomba > 0) && (temporizadorParaAcionarBomba < 5) ) {
+      digitalWrite(pinLed, LOW);
+      digitalWrite(ledAlerta, LOW); // bomba d'água
+      digitalWrite(ledAtencao, HIGH);
+    }
+    if(temporizadorParaAcionarBomba == 5) {
+      digitalWrite(ledAtencao, LOW);
+      digitalWrite(pinLed, LOW); //indicador de solo molhado
+      digitalWrite(ledAlerta, HIGH); // bomba d'água 
+    }
+  }
 }
 
 
@@ -83,8 +110,8 @@ void temperatura() {
     return;
   }
   
-  //Serial.print((int)temperature); Serial.print(" *C, "); 
-  //Serial.print((int)humidity); Serial.println(" H");
+  Serial.print((int)temperature); Serial.print(" *C, "); 
+  Serial.print((int)humidity); Serial.println(" H");
   
   // DHT11 sampling rate is 1HZ.
   delay(500);
