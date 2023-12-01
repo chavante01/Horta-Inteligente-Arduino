@@ -17,11 +17,11 @@
 // ========================================================================================================
 // --- Constantes Auxiliares ---
 #define   segL       00
-#define   minL       37
-#define   horL       23
-//#define   d_semL      4
-//#define   d_mesL     29
-//#define   mesL       11
+#define   minL       24
+#define   horL       00
+#define   d_semL      6
+#define   d_mesL     01
+#define   mesL       12
 #define   anoL     2023
 // ========================================================================================================
 // --- Declaração de Objetos ---
@@ -31,7 +31,7 @@ virtuabotixRTC   myRTC(clk, dat, rst);         //declara objeto para o RTC
 
 int pinDHT11 = A0; //Pino que faz a leitura de umidade e temperatura
 int modoDeApresentacao = 0;
-int diasParaColheita = 48;
+int diasParaColheita = 47;
 int comparador = 50;
 int diasQuePassaram = 0;
 int temporizadorParaAcionarBomba = 0;//essa variável é utilizada para segurança da bomba d'água, ela só irá acionar depois de 5 minutos que o sistema tiver passado para o estado "seco"
@@ -199,14 +199,22 @@ void tela() {
   if(modoDeApresentacao == 3){
     lcd.clear();
     lcd.setCursor(3, 0);
-    if(myRTC.hours < 10) lcd.print("0");
-    lcd.print(myRTC.hours);
-    lcd.print(":");
-    if(myRTC.minutes < 10) lcd.print("0");
-    lcd.print(myRTC.minutes);
-    lcd.print(":");
-    if(myRTC.seconds < 10) lcd.print("0");
-    lcd.print(myRTC.seconds);
+      if(myRTC.hours < 10) lcd.print("0");
+      lcd.print(myRTC.hours);
+      lcd.print(":");
+      if(myRTC.minutes < 10) lcd.print("0");
+      lcd.print(myRTC.minutes);
+      lcd.print(":");
+      if(myRTC.seconds < 10) lcd.print("0");
+      lcd.print(myRTC.seconds);
+    lcd.setCursor(2, 1);
+      if(myRTC.dayofmonth < 10) lcd.print("0");
+      lcd.print(myRTC.dayofmonth);
+      lcd.print("/");
+      if(myRTC.month < 10) lcd.print("0");
+      lcd.print(myRTC.month);
+      lcd.print("/");
+      lcd.print(myRTC.year);
   }
   
 }
