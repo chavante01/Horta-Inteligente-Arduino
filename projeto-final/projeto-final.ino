@@ -17,11 +17,11 @@
 // ========================================================================================================
 // --- Constantes Auxiliares ---
 #define   segL       00
-#define   minL       26
-#define   horL       12
-#define   d_semL      2
-#define   d_mesL     27
-#define   mesL       11
+#define   minL       37
+#define   horL       23
+//#define   d_semL      4
+//#define   d_mesL     29
+//#define   mesL       11
 #define   anoL     2023
 // ========================================================================================================
 // --- Declaração de Objetos ---
@@ -31,10 +31,11 @@ virtuabotixRTC   myRTC(clk, dat, rst);         //declara objeto para o RTC
 
 int pinDHT11 = A0; //Pino que faz a leitura de umidade e temperatura
 int modoDeApresentacao = 0;
-int diasParaColheita = 50;
+int diasParaColheita = 48;
 int comparador = 50;
 int diasQuePassaram = 0;
 int temporizadorParaAcionarBomba = 0;//essa variável é utilizada para segurança da bomba d'água, ela só irá acionar depois de 5 minutos que o sistema tiver passado para o estado "seco"
+int temporizadorParaDesligarBomba = 0;//essa variável é utilizada para segurança da bomba d'água, ela só irá acionar depois de 1 minuto que o sistema tiver passado para o estado "molhado"
 SimpleDHT11 dht11(pinDHT11);
 
 LiquidCrystal_I2C lcd(0x27, 16, 2);  // set the LCD address to 0x27 for a 16 chars and 2 line display
@@ -58,9 +59,12 @@ void loop() {
   temperatura();
   tela();
   
+  
+
   myRTC.updateTime();
-  if(myRTC.hours == 23 && myRTC.minutes == 59){ // se passarem 24h, então decresça um dia do tempo para a colheita
+  if(myRTC.hours == 23 && myRTC.minutes == 59 && myRTC.seconds == 59){ // se passarem 24h, então decresça um dia do tempo para a colheita
     if(comparador != diasQuePassaram){
+      delay(1000);
       diasParaColheita = diasParaColheita - 1;
       diasQuePassaram ++;
     }
@@ -68,21 +72,28 @@ void loop() {
 }
 
 void umidadeDaTerra() {
-  myRTC.updateTime();
-  Serial.print(myRTC.seconds);
-  Serial.print(" //");
-  Serial.print(temporizadorParaAcionarBomba);
-  Serial.print(" //");
+  //myRTC.updateTime();
+  //Serial.print(myRTC.seconds);
+  //Serial.print(" //");
+  //Serial.print(temporizadorParaDesligarBomba);
+  //Serial.print(" //");
 
-  if (digitalRead(sensorUmidade) == LOW){ //condição que identifica quando o solo está molhado
-    temporizadorParaAcionarBomba = 0; //reseta o contador de segurança
-    digitalWrite(pinLed, HIGH); //indicador de solo molhado
-    digitalWrite(ledAlerta, LOW); //bomba d'água
-    digitalWrite(ledAtencao, LOW);
+  if(digitalRead(sensorUmidade) == LOW){
+    if(myRTC.seconds == 59){
+      temporizadorParaDesligarBomba ++;
+      digitalWrite(pinLed, LOW);
+      digitalWrite(ledAtencao, HIGH);
+      digitalWrite(ledAlerta, LOW);
+    }
+    if(temporizadorParaDesligarBomba == 2){
+      temporizadorParaAcionarBomba = 0; //reseta o contador de segurança
+      digitalWrite(pinLed, HIGH); //indicador de solo molhado
+      digitalWrite(ledAlerta, LOW); //bomba d'água
+      digitalWrite(ledAtencao, LOW);
+    }
   }
   
-
-  else if(digitalRead(sensorUmidade) == HIGH){ //condição que identifica solo seco
+  if(digitalRead(sensorUmidade) == HIGH){ //condição que identifica solo seco
     if(myRTC.seconds == 59) {  // esse contador tem uma imprecisão de alguns segundos, mas serão suficientes para que a bomba só acione quando de fato necessário
       temporizadorParaAcionarBomba ++;
     }
@@ -92,6 +103,7 @@ void umidadeDaTerra() {
       digitalWrite(ledAtencao, HIGH);
     }
     if(temporizadorParaAcionarBomba == 5) {
+      temporizadorParaDesligarBomba = 0;
       digitalWrite(ledAtencao, LOW);
       digitalWrite(pinLed, LOW); //indicador de solo molhado
       digitalWrite(ledAlerta, HIGH); // bomba d'água 
@@ -119,22 +131,21 @@ void temperatura() {
 
 
 void tela() {
-  
+
   if(digitalRead(controleDaTela) == LOW) { //função que muda o que é mostrado no display
     modoDeApresentacao ++;
-    Serial.print(modoDeApresentacao);
-    delay(100);
+    //Serial.print(modoDeApresentacao);
+    delay(500);
   }
 
-  if(modoDeApresentacao == 3){
+  if(modoDeApresentacao == 4){
     modoDeApresentacao = 0;
-    Serial.print(modoDeApresentacao);
+    //Serial.print(modoDeApresentacao);
   }
 
   while(digitalRead(controleDaTela) == LOW){ //impede que o pressionar do botão continue contando
 
   }
-
 
   if(modoDeApresentacao == 0) { //tela responsável por exibir as informaçoes de umidade do solo
     if(digitalRead(sensorUmidade) == LOW){
@@ -185,5 +196,17 @@ void tela() {
       lcd.print(" dias");
   }
   
+  if(modoDeApresentacao == 3){
+    lcd.clear();
+    lcd.setCursor(3, 0);
+    if(myRTC.hours < 10) lcd.print("0");
+    lcd.print(myRTC.hours);
+    lcd.print(":");
+    if(myRTC.minutes < 10) lcd.print("0");
+    lcd.print(myRTC.minutes);
+    lcd.print(":");
+    if(myRTC.seconds < 10) lcd.print("0");
+    lcd.print(myRTC.seconds);
+  }
   
 }
