@@ -59,8 +59,6 @@ void loop() {
   temperatura();
   tela();
   
-  
-
   myRTC.updateTime();
   if(myRTC.hours == 23 && myRTC.minutes == 59 && myRTC.seconds == 59){ // se passarem 24h, então decresça um dia do tempo para a colheita
     if(comparador != diasQuePassaram){
@@ -81,10 +79,13 @@ void umidadeDaTerra() {
   if(digitalRead(sensorUmidade) == LOW){
     if(myRTC.seconds == 59){
       temporizadorParaDesligarBomba ++;
-      digitalWrite(pinLed, LOW);
-      digitalWrite(ledAtencao, HIGH);
-      digitalWrite(ledAlerta, LOW);
     }
+    if(temporizadorParaDesligarBomba < 2) {
+      digitalWrite(pinLed, LOW); //indicador de solo molhado
+      digitalWrite(ledAlerta, HIGH); //bomba d'água
+      digitalWrite(ledAtencao, HIGH); //indica que o estado vai passar de "seco" para "molhado"
+     }
+
     if(temporizadorParaDesligarBomba == 2){
       temporizadorParaAcionarBomba = 0; //reseta o contador de segurança
       digitalWrite(pinLed, HIGH); //indicador de solo molhado
